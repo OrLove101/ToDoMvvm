@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">ToDoMVVMApp</string>
+    <string name="important_task">Important task</string>
+    <string name="task_name">Task name</string>
+</resources>
