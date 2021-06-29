@@ -1,4 +1,4 @@
-package com.orlove101.android.todomvvmapp.ui.tasks.activities
+package com.orlove101.android.todomvvmapp.ui
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
