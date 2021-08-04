@@ -5,8 +5,11 @@ import com.orlove101.android.todomvvmapp.data.models.Task
 import com.orlove101.android.todomvvmapp.data.persistence.PreferencesManager
 import com.orlove101.android.todomvvmapp.data.persistence.SortOrder
 import com.orlove101.android.todomvvmapp.data.persistence.TaskDao
+import com.orlove101.android.todomvvmapp.ui.ADD_TASK_RESULT_OK
+import com.orlove101.android.todomvvmapp.ui.EDIT_TASK_RESULT_OK
 import dagger.assisted.Assisted
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -26,7 +29,7 @@ class TasksViewModel @Inject constructor(
 
     val preferencesFlow = preferencesManager.preferencesFlow
 
-    private val tasksEventChannel = Channel<TasksEvent>()// with a channel we could send data between two coroutines
+    private val tasksEventChannel = Channel<TasksEvent>() // with a channel we could send data between two coroutines
     val tasksEvent = tasksEventChannel.receiveAsFlow()
 
     private val tasksFlow = combine(
@@ -79,10 +82,29 @@ class TasksViewModel @Inject constructor(
         }
     }
 
+    fun onAddEditResult(result: Int) {
+        when (result) {
+            ADD_TASK_RESULT_OK -> showTaskSavedConfirmationMessage("Task added")
+            EDIT_TASK_RESULT_OK -> showTaskSavedConfirmationMessage("Task updated")
+        }
+    }
+
+    private fun showTaskSavedConfirmationMessage(text: String) = viewModelScope.launch {
+        tasksEventChannel.send(TasksEvent.ShowTaskSavedConfirmationMessage(text))
+    }
+
+    fun onDeleteAllCompletedClick(): Job {
+        return viewModelScope.launch {
+            tasksEventChannel.send(TasksEvent.NavigateToDeleteAllCompletedScreen)
+        }
+    }
+
     sealed class TasksEvent {
         // if event takes no arguments we could make object class that will be more efficient
         object NavigateToAddTaskScreen: TasksEvent()
         data class NavigateToEditTaskScreen(val task: Task): TasksEvent()
         data class ShowUndoDeleteTaskMessage(val task: Task): TasksEvent()
+        data class ShowTaskSavedConfirmationMessage(val msg: String): TasksEvent()
+        object NavigateToDeleteAllCompletedScreen: TasksEvent()
     }
 }

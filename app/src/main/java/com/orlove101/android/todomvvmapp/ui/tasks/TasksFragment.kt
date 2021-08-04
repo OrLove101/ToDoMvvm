@@ -4,8 +4,10 @@ import android.os.Bundle
 import android.view.*
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.setFragmentResultListener
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -30,6 +32,8 @@ class TasksFragment: Fragment(), TasksAdapter.OnItemClickListener {
     private val viewModel: TasksViewModel by viewModels()
 
     private var tasksAdapter: TasksAdapter? = null
+
+    private var searchView: SearchView? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -69,10 +73,23 @@ class TasksFragment: Fragment(), TasksAdapter.OnItemClickListener {
                             }.show()
                     }
                     is TasksViewModel.TasksEvent.NavigateToAddTaskScreen -> {
-                        
+                        val action = TasksFragmentDirections
+                            .actionTasksFragmentToAddEditTaskFragment(title = "New Task")
+
+                        findNavController().navigate(action)
                     }
                     is TasksViewModel.TasksEvent.NavigateToEditTaskScreen -> {
+                        val action = TasksFragmentDirections
+                            .actionTasksFragmentToAddEditTaskFragment(event.task, "Edit Task")
 
+                        findNavController().navigate(action)
+                    }
+                    is TasksViewModel.TasksEvent.ShowTaskSavedConfirmationMessage -> {
+                        Snackbar.make(requireView(), event.msg, Snackbar.LENGTH_SHORT).show()
+                    }
+                    TasksViewModel.TasksEvent.NavigateToDeleteAllCompletedScreen -> {
+                        val action = TasksFragmentDirections.actionGlobalDeleteAllCompletedDialogFragment()
+                        findNavController().navigate((action))
                     }
                 }.exhaustive
             }
@@ -116,6 +133,12 @@ class TasksFragment: Fragment(), TasksAdapter.OnItemClickListener {
                     viewModel.onTaskSwiped(requireNotNull(task))
                 }
             }).attachToRecyclerView(recyclerView)
+
+            setFragmentResultListener("add_edit_request") { _, bundle ->
+                val result = bundle.getInt("add_edit_result")
+
+                viewModel.onAddEditResult(result)
+            }
         }
     }
 
@@ -123,9 +146,16 @@ class TasksFragment: Fragment(), TasksAdapter.OnItemClickListener {
         inflater.inflate(R.menu.menu_fragment_tasks, menu)
 
         val searchItem = menu.findItem(R.id.action_search)
-        val searchView = searchItem.actionView as SearchView
+        searchView = searchItem.actionView as SearchView
 
-        searchView.onQueryTextChanged {
+        val pendingQuery = viewModel.searchQuery.value
+
+        if (pendingQuery != null && pendingQuery.isNotEmpty()) {
+            searchItem.expandActionView()
+            searchView?.setQuery(pendingQuery, false)
+        }
+
+        searchView?.onQueryTextChanged {
             viewModel.searchQuery.value = it
         }
 
@@ -151,6 +181,7 @@ class TasksFragment: Fragment(), TasksAdapter.OnItemClickListener {
                 true
             }
             R.id.action_delete_all_completed_tasks -> {
+                viewModel.onDeleteAllCompletedClick()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -159,6 +190,7 @@ class TasksFragment: Fragment(), TasksAdapter.OnItemClickListener {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        searchView?.setOnQueryTextListener(null)
         _binding = null
     }
 }
